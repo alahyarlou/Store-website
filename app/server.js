@@ -2,8 +2,9 @@ const express = require("express");
 const path = require("path");
 const http = require("http");
 const { default: mongoose } = require("mongoose");
+const allRoutes = require("./router/router");
 
-class Application {
+module.exports = class Application {
   #app = express();
   #DB_URL;
   #PORT;
@@ -31,13 +32,15 @@ class Application {
   }
 
   async connectToMongoDb() {
-    await mongoose.connect(this.#DB_URL, (err) => {
-      if (!err) return console.log("connect to databse!");
-      return console.log("connection to db is faild!");
-    });
+    await mongoose
+      .connect(this.#DB_URL)
+      .then((res) => console.log("success connect to databse"))
+      .catch((err) => console.log("faild connect to databse"));
   }
 
-  createRoutes() {}
+  createRoutes() {
+    this.#app.use(allRoutes);
+  }
 
   errorHandeling() {
     this.#app.use((req, res, next) => {
@@ -56,6 +59,4 @@ class Application {
       });
     });
   }
-}
-
-module.exports = new Application();
+};
