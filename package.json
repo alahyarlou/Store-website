@@ -4,7 +4,7 @@
   "description": "store website with nodejs",
   "main": "index.js",
   "scripts": {
-    "test": "nodemon index.js"
+    "start": "nodemon node index.js"
   },
   "keywords": [],
   "author": "",
