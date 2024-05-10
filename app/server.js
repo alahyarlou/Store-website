@@ -3,6 +3,8 @@ const path = require("path");
 const http = require("http");
 const { default: mongoose } = require("mongoose");
 const allRoutes = require("./router/router");
+const morgan = require("morgan");
+const createHttpError = require("http-errors");
 
 module.exports = class Application {
   #app = express();
@@ -20,6 +22,7 @@ module.exports = class Application {
   }
 
   configApplication() {
+    this.#app.use(morgan("dev"));
     this.#app.use(express.json());
     this.#app.use(express.urlencoded({ extended: true }));
     this.#app.use(express.static(path.join(__dirname, "..", "public")));
@@ -34,8 +37,21 @@ module.exports = class Application {
   async connectToMongoDb() {
     await mongoose
       .connect(this.#DB_URL)
-      .then((res) => console.log("success connect to databse"))
-      .catch((err) => console.log("faild connect to databse"));
+      .then((res) => console.log("connected to databse"))
+      .catch((err) => console.log(err.message));
+
+    process.on("SIGINT", async () => {
+      await mongoose.connection.close();
+      process.exit(0);
+    });
+
+    mongoose.connection.on("connected", () => {
+      console.log("connected");
+    });
+
+    mongoose.connection.on("disconnected", () => {
+      console.log("close the connection!");
+    });
   }
 
   createRoutes() {
@@ -44,18 +60,20 @@ module.exports = class Application {
 
   errorHandeling() {
     this.#app.use((req, res, next) => {
-      return res.status(404).json({
-        statusCode: 404,
-        message: "The route is NotFound",
-      });
+      next(createHttpError.NotFound("آدرس موردنظر یافت نشد"));
     });
 
     this.#app.use((error, req, res, next) => {
-      const statusCode = error?.status || 500;
-      const message = error?.message || "internalServerError";
+      const serverError = createHttpError.InternalServerError();
+      const statusCode = error?.status || serverError.status;
+      const message = error?.message || serverError;
+
       return res.status(statusCode).json({
-        statusCode,
-        message,
+        data: null,
+        errors: {
+          statusCode,
+          message,
+        },
       });
     });
   }
